@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: zoomed_images
+      MYSQL_USER: root
+      MYSQL_PASSWORD: rootpassword
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:5.7
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: zoomed_images
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - app-network
+
+  jms-broker:
+    image: tomee:8-jre-8.0.11-webprofile
+    container_name: jms-broker
+    environment:
+      - JMS_BROKER_PORT=61616
+    ports:
+      - "61616:61616"
+    networks:
+      - app-network
+
+  ejb-mdb:
+    build:
+      context: .
+      dockerfile: Dockerfile.ejb-mdb
+    container_name: ejb-mdb
+    depends_on:
+      - jms-broker
+    environment:
+      JMS_BROKER_URL: jms-broker:61616
+    networks:
+      - app-network
+
+  rmi-server-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.rmi-server
+    container_name: rmi-server-1
+    ports:
+      - "1099:1099"
+    networks:
+      - app-network
+
+  rmi-server-2:
+    build:
+      context: .
+      dockerfile: Dockerfile.rmi-server
+    container_name: rmi-server-2
+    ports:
+      - "1100:1099"
+    networks:
+      - app-network
+
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
+
+  node-rest:
+    build:
+      context: .
+      dockerfile: Dockerfile.node-rest
+    container_name: node-rest
+    depends_on:
+      - mysql
+      - mongodb
+    ports:
+      - "4000:4000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

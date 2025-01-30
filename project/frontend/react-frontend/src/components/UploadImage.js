@@ -1,49 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 function UploadImage() {
   const [file, setFile] = useState(null);
-  const [zoom, setZoom] = useState(100); // Default zoom percentage is 100%
-  const [imageData, setImageData] = useState(null); // Store the image data for further processing
+  const [zoom, setZoom] = useState(100); 
+  const [imageSrc, setImageSrc] = useState(null);
 
-  // Handle file change and preview the image on the canvas
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     setFile(selectedFile);
 
     if (selectedFile) {
-      const canvas = document.getElementById("myCanvas");
-      const img = new window.SimpleImage(e.target);
-      img.drawTo(canvas); // Display the image on the canvas
+      const reader = new FileReader();
 
-      setImageData(img);
+      reader.onload = (event) => {
+        setImageSrc(event.target.result); 
+      };
+
+      reader.readAsDataURL(selectedFile);
     }
   };
 
-  // Handle zoom percentage change
+  useEffect(() => {
+    if (imageSrc) {
+      const img = new Image();
+      img.src = imageSrc;
+
+      img.onload = () => {
+        const canvas = document.getElementById("myCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const newWidth = (img.width * zoom) / 100;
+        const newHeight = (img.height * zoom) / 100;
+        
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+      };
+    }
+  }, [imageSrc, zoom]);
+
   const handleZoomChange = (e) => {
-    const zoomValue = e.target.value;
-    setZoom(zoomValue);
-
-    if (imageData) {
-      // Update image size according to zoom value
-      const canvas = document.getElementById("myCanvas");
-      const context = canvas.getContext("2d");
-
-      context.clearRect(0, 0, canvas.width, canvas.height); 
-
-      // Resize the canvas based on zoom
-      const newWidth = (imageData.getWidth() * zoomValue) / 100;
-      const newHeight = (imageData.getHeight() * zoomValue) / 100;
-      canvas.width = newWidth;
-      canvas.height = newHeight;
-
-      // Draw the zoomed image on the canvas
-      imageData.drawTo(canvas);
-    }
+    setZoom(Number(e.target.value));
   };
 
-  // Submit the form to the backend
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -52,23 +54,19 @@ function UploadImage() {
       return;
     }
 
-    // Prepare the form data to send
     const formData = new FormData();
     formData.append("image", file);
     formData.append("zoom", zoom);
 
     try {
-      // Send data to the backend via REST API
-      const response = await axios.post("http://localhost:8080/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        process.env.REACT_APP_BACKEND_URL || "http://localhost:8080/upload",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
 
       if (response.data) {
         alert("Image uploaded and processing started");
-
-        // If you want to show the response data, you can update the state
         console.log("Server response:", response.data);
       }
     } catch (error) {
@@ -76,7 +74,7 @@ function UploadImage() {
     }
   };
 
- return (
+  return (
     <div className="container">
       <h1>Image Magnifier App</h1>
       <form onSubmit={handleSubmit}>

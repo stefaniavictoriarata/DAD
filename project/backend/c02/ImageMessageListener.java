@@ -20,20 +20,29 @@ public class ImageMessageListener implements MessageListener {
         try {
             if (message instanceof BytesMessage) {
                 BytesMessage byteMessage = (BytesMessage) message;
-                byte[] data = new byte[(int) byteMessage.getBodyLength()];
-                byteMessage.readBytes(data);
-                // Process the image (e.g., save it to DB, send it to RMI servers, etc.)
-                // Here we simulate image processing and then pass the job along
-                System.out.println("Received image, processing...");
-                processImage(data);
+                byte[] fileData = new byte[(int) bytesMessage.getBodyLength()];
+                bytesMessage.readBytes(fileData);
+                String filename = bytesMessage.getStringProperty("fileName");
+
+                System.out.println("Received image from JMS: " + filename);
+
+                byte[] processedImage = processImageWithRmi(filename, fileData);
+
+                System.out.println("Processed image and sending to DB.");
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void processImage(byte[] imageData) {
-        // Further image processing logic (resize, store, etc.)
-        System.out.println("Processing image...");
+    private byte[] processImageWithRmi(String filename, byte[] fileData) {
+        try {
+            Registry registry = LocateRegistry.getRegistry("C04_HOST", 1099);
+            ImageProcessor stub = (ImageProcessor) registry.lookup("ImageProcessorService");
+            return stub.processImage(fileData);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
