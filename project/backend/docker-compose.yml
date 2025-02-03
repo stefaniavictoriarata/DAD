@@ -2,10 +2,7 @@ version: '3.8'
 
 services:
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    container_name: frontend
+    build: ./frontend
     ports:
       - "3000:3000"
     depends_on:
@@ -14,98 +11,87 @@ services:
       - app-network
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: backend
+    build: ./c01-backend
     ports:
       - "8080:8080"
+    environment:
+      DB_HOST: database
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: pictures
+      MONGO_URI: mongodb://mongodb:27017/mydatabase
     depends_on:
-      - mysql
-    environment:
-      MYSQL_HOST: mysql
-      MYSQL_PORT: 3306
-      MYSQL_DATABASE: zoomed_images
-      MYSQL_USER: root
-      MYSQL_PASSWORD: rootpassword
-    networks:
-      - app-network
-
-  mysql:
-    image: mysql:5.7
-    container_name: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: zoomed_images
-    volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "3306:3306"
+      - jms-broker
+      - database
+      - mongodb
     networks:
       - app-network
 
   jms-broker:
-    image: tomee:8-jre-8.0.11-webprofile
-    container_name: jms-broker
-    environment:
-      - JMS_BROKER_PORT=61616
+    build: ./c02-jms-broker
     ports:
-      - "61616:61616"
+      - "61616:61616"  # JMS Broker port
+      - "8161:8161"    # ActiveMQ Admin Console (http://localhost:8161)
     networks:
       - app-network
 
-  ejb-mdb:
-    build:
-      context: .
-      dockerfile: Dockerfile.ejb-mdb
-    container_name: ejb-mdb
+  mdb:
+    build: ./c03-mdb
     depends_on:
       - jms-broker
-    environment:
-      JMS_BROKER_URL: jms-broker:61616
+      - rmi-server-1
+      - rmi-server-2
     networks:
       - app-network
 
   rmi-server-1:
-    build:
-      context: .
-      dockerfile: Dockerfile.rmi-server
-    container_name: rmi-server-1
+    build: ./c04-rmi-server-1
     ports:
-      - "1099:1099"
+      - "1099:1099"  # Default RMI port
     networks:
       - app-network
 
   rmi-server-2:
-    build:
-      context: .
-      dockerfile: Dockerfile.rmi-server
-    container_name: rmi-server-2
+    build: ./c05-rmi-server-2
     ports:
-      - "1100:1099"
+      - "1100:1099"  # Maps internal 1099 to external 1100
+    networks:
+      - app-network
+
+  database:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: pictures
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
   mongodb:
-    image: mongo:4.4
-    container_name: mongodb
+    image: mongo:5
     ports:
       - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
-  node-rest:
-    build:
-      context: .
-      dockerfile: Dockerfile.node-rest
-    container_name: node-rest
-    depends_on:
-      - mysql
-      - mongodb
-    ports:
-      - "4000:4000"
-    networks:
-      - app-network
+volumes:
+  db_data:
+  mongo_data:
 
 networks:
   app-network:
