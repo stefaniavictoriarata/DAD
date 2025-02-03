@@ -1,14 +1,14 @@
-import javax.ejb.ActivationConfigProperty;
-import javax.ejb.MessageDriven;
-import javax.jms.BytesMessage;
-import javax.jms.Message;
-import javax.jms.MessageListener;
+import jakarta.ejb.ActivationConfigProperty;
+import jakarta.ejb.MessageDriven;
+import jakarta.jms.BytesMessage;
+import jakarta.jms.Message;
+import jakarta.jms.MessageListener;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 @MessageDriven(
     activationConfig = {
-        @ActivationConfigProperty(propertyName = "destinationType", propertyValue = "javax.jms.Topic"),
+        @ActivationConfigProperty(propertyName = "destinationType", propertyValue = "jakarta.jms.Topic"),
         @ActivationConfigProperty(propertyName = "destination", propertyValue = "java:/jms/topic/MyTopic")
     }
 )

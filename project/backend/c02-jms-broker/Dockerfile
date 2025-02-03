@@ -1,14 +1,23 @@
-FROM rmohr/activemq:5.15.9
+# Use Maven and OpenJDK base image to compile the code
+FROM maven:3.8.4-openjdk-17 as build
+
+# Set the working directory
 WORKDIR /app
 
-# Copy all files from the current directory to /app in the container
+# Copy the pom.xml to the container
+COPY pom.xml .
+
+# Download dependencies (offline mode)
+RUN mvn dependency:go-offline
+
+# Copy the source code (including ImageMessageListener.java)
 COPY . .
 
-# Compile the Java class (replace MainClass.java with your actual file)
-RUN javac ImageMessageListener.java
+# Compile the Java source code and package the application into a JAR
+RUN mvn clean package
 
-# Run the compiled Java class (replace MainClass with your actual class name)
-CMD ["java", "ImageMessageListener"]
+# Expose any necessary ports (for JMS, etc.)
+EXPOSE 61616 8161
 
-EXPOSE 61616
-EXPOSE 8161
+# Run the compiled Java class (ensure your packaged JAR is in the target folder)
+CMD ["java", "-cp", "target/image-processor-1.0-SNAPSHOT.jar", "com.example.ImageMessageListener"]

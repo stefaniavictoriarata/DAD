@@ -1,16 +1,24 @@
-FROM openjdk:17-jdk-slim
+# Use Maven and OpenJDK base image
+FROM maven:3.8.4-openjdk-17-slim AS build
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy all files from the current directory to /app in the container
+# Copy pom.xml and source files to the container
+COPY pom.xml .
 COPY . .
 
-# Compile the Java class (replace MainClass.java with your actual file)
-RUN javac ImageUploadApp.java
+# Build the application using Maven
+RUN mvn clean package -DskipTests
 
-# Run the compiled Java class (replace MainClass with your actual class name)
-CMD ["java", "ImageUploadApp"]
+# Use OpenJDK for the runtime environment
+FROM openjdk:17-jdk-slim
 
-# Expose port 8080
+WORKDIR /app
+
+# Copy the JAR file from the build stage
+COPY --from=build /app/target/image-upload-app-1.0-SNAPSHOT.jar /app/image-upload-app.jar
+
+# Run the application
+CMD ["java", "-jar", "image-upload-app.jar"]
+
 EXPOSE 8080

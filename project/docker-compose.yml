@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   frontend:
-    build: ./frontend
+    build: ./frontend/react-frontend
     ports:
       - "3000:3000"
     depends_on:
@@ -11,7 +9,7 @@ services:
       - app-network
 
   backend:
-    build: ./c01-backend
+    build: ./backend/c01-backend
     ports:
       - "8080:8080"
     environment:
@@ -28,7 +26,7 @@ services:
       - app-network
 
   jms-broker:
-    build: ./c02-jms-broker
+    build: ./backend/c02-jms-broker
     ports:
       - "61616:61616"  # JMS Broker port
       - "8161:8161"    # ActiveMQ Admin Console (http://localhost:8161)
@@ -36,7 +34,7 @@ services:
       - app-network
 
   mdb:
-    build: ./c03-mdb
+    build: ./backend/c03-mdb
     depends_on:
       - jms-broker
       - rmi-server-1
@@ -45,14 +43,14 @@ services:
       - app-network
 
   rmi-server-1:
-    build: ./c04-rmi-server-1
+    build: ./backend/c04-rmi-server-1
     ports:
       - "1099:1099"  # Default RMI port
     networks:
       - app-network
 
   rmi-server-2:
-    build: ./c05-rmi-server-2
+    build: ./backend/c05-rmi-server-2
     ports:
       - "1100:1099"  # Maps internal 1099 to external 1100
     networks:

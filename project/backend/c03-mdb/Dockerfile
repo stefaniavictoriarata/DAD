@@ -1,13 +1,13 @@
-# c03-mdb/Dockerfile
-FROM openjdk:17-jdk-slim
+FROM maven:3.8.4-openjdk-17-slim AS build
+
 WORKDIR /app
 
-# Copy all files from the current directory to /app in the container
+# Copy the pom.xml and other necessary files first to cache dependencies
+COPY pom.xml .
 COPY . .
 
-# Compile the Java class (replace MainClass.java with your actual file)
-RUN javac ImageProcessorMDB.java
-
-# Run the compiled Java class (replace MainClass with your actual class name)
+# Run the compiled class (replace with your main class name)
 CMD ["java", "ImageProcessorMDB"]
+
+# Expose necessary ports
 EXPOSE 1099
